@@ -65,7 +65,8 @@ class Nexage_Gate {
                 'blocked_headline' => 'Access Restricted',
                 'blocked_description' => 'You must be {age}+ to view this content.',
                 'blocked_button_label' => 'Go Home',
-                'blocked_button_url' => 'https://www.google.com'
+                'blocked_button_url' => 'https://www.google.com',
+                'blocked_retry_label' => 'I entered my data incorrectly'
             ],
             'paths' => [],
             'woo_categories' => [],
@@ -142,10 +143,12 @@ class Nexage_Gate {
             $bd = isset($t['blocked_description']) && trim((string)$t['blocked_description']) !== '' ? $t['blocked_description'] : $dt['blocked_description'];
             $bl = isset($t['blocked_button_label']) && trim((string)$t['blocked_button_label']) !== '' ? $t['blocked_button_label'] : $dt['blocked_button_label'];
             $bu = isset($t['blocked_button_url']) && trim((string)$t['blocked_button_url']) !== '' ? $t['blocked_button_url'] : $dt['blocked_button_url'];
+            $br = isset($t['blocked_retry_label']) && trim((string)$t['blocked_retry_label']) !== '' ? $t['blocked_retry_label'] : $dt['blocked_retry_label'];
             echo '<tr><th>Blocked page headline</th><td><input type="text" name="texts[blocked_headline]" value="' . esc_attr($bh) . '" class="regular-text"></td></tr>';
             echo '<tr><th>Blocked page description</th><td><textarea name="texts[blocked_description]" class="large-text" rows="3">' . esc_textarea($bd) . '</textarea><p class="description">Use {age} to insert the required age.</p></td></tr>';
             echo '<tr><th>Blocked button label</th><td><input type="text" name="texts[blocked_button_label]" value="' . esc_attr($bl) . '"></td></tr>';
             echo '<tr><th>Blocked button URL</th><td><input type="text" name="texts[blocked_button_url]" value="' . esc_attr($bu) . '" class="regular-text"><p class="description">Absolute URL or relative path (e.g., /shop). Defaults to https://www.google.com.</p></td></tr>';
+            echo '<tr><th>Retry button label</th><td><input type="text" name="texts[blocked_retry_label]" value="' . esc_attr($br) . '"></td></tr>';
             echo '</table>';
         }
         if ($tab === 'visual') {
@@ -222,6 +225,7 @@ class Nexage_Gate {
             $opts['texts']['blocked_description'] = isset($t['blocked_description']) ? wp_kses_post($t['blocked_description']) : $opts['texts']['blocked_description'];
             $opts['texts']['blocked_button_label'] = isset($t['blocked_button_label']) ? sanitize_text_field($t['blocked_button_label']) : $opts['texts']['blocked_button_label'];
             $opts['texts']['blocked_button_url'] = isset($t['blocked_button_url']) ? sanitize_text_field($t['blocked_button_url']) : $opts['texts']['blocked_button_url'];
+            $opts['texts']['blocked_retry_label'] = isset($t['blocked_retry_label']) ? sanitize_text_field($t['blocked_retry_label']) : $opts['texts']['blocked_retry_label'];
         }
         if ($tab === 'visual') {
             $opts['logo_id'] = isset($incoming['logo_id']) ? (int)$incoming['logo_id'] : 0;
@@ -338,12 +342,19 @@ class Nexage_Gate {
     public function register_query_vars($vars) {
         $vars[] = 'nexage_gate_svg';
         $vars[] = 'nexage_gate_blocked';
+        $vars[] = 'nexage_gate_retry';
         return $vars;
     }
 
     public function handle_endpoints() {
         $svg = get_query_var('nexage_gate_svg');
         $blocked = get_query_var('nexage_gate_blocked');
+        $retry = get_query_var('nexage_gate_retry');
+        if ($retry) {
+            setcookie('nexage_gate_access', '', time() - 3600, '/');
+            wp_safe_redirect(home_url('/'));
+            exit;
+        }
         if ($svg) {
             $age_in = filter_input(INPUT_GET, 'age', FILTER_SANITIZE_NUMBER_INT);
             $age = $age_in !== null && $age_in !== false ? max(0, (int)$age_in) : (int)$this->options['min_age'];
@@ -363,7 +374,10 @@ class Nexage_Gate {
             $btn_label = isset($t['blocked_button_label']) && $t['blocked_button_label'] !== '' ? $t['blocked_button_label'] : 'Go Home';
             $btn_raw = isset($t['blocked_button_url']) ? trim((string)$t['blocked_button_url']) : '';
             $btn_url = $btn_raw !== '' ? ( (stripos($btn_raw, 'http://') === 0 || stripos($btn_raw, 'https://') === 0 || strpos($btn_raw, '//') === 0) ? $btn_raw : home_url($btn_raw) ) : home_url('/');
-            echo '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . esc_html($headline) . '</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#111;color:#fff;font-family:system-ui,Segoe UI,Roboto,Arial} .wrap{text-align:center;padding:24px} img{max-width:200px;height:auto;display:block;margin:0 auto 16px} a.button{display:inline-block;background:#fff;color:#111;padding:10px 16px;text-decoration:none;border-radius:6px} </style></head><body><div class="wrap"><img src="' . esc_url(home_url('/?nexage_gate_svg=1&age=' . $age)) . '" alt="+' . esc_attr($age) . '"><h1>' . esc_html($headline) . '</h1><p>' . wp_kses_post($desc) . '</p><p><a class="button" href="' . esc_url($btn_url) . '">' . esc_html($btn_label) . '</a></p></div></body></html>';
+            $retry_label = isset($t['blocked_retry_label']) && $t['blocked_retry_label'] !== '' ? $t['blocked_retry_label'] : 'I entered my data incorrectly';
+            $btn_bg = isset($this->options['colors']['button_bg']) ? (string)$this->options['colors']['button_bg'] : '#111';
+            $btn_text = isset($this->options['colors']['button_text']) ? (string)$this->options['colors']['button_text'] : '#fff';
+            echo '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>' . esc_html($headline) . '</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#111;color:#fff;font-family:system-ui,Segoe UI,Roboto,Arial} .wrap{text-align:center;padding:24px} img{max-width:200px;height:auto;display:block;margin:0 auto 16px} a.button{display:inline-block;background:' . esc_attr($btn_bg) . ';color:' . esc_attr($btn_text) . ';padding:10px 16px;text-decoration:none;border-radius:6px;margin:0 6px} </style></head><body><div class="wrap"><img src="' . esc_url(home_url('/?nexage_gate_svg=1&age=' . $age)) . '" alt="+' . esc_attr($age) . '"><h1>' . esc_html($headline) . '</h1><p>' . wp_kses_post($desc) . '</p><p><a class="button" href="' . esc_url($btn_url) . '">' . esc_html($btn_label) . '</a><a class="button" href="' . esc_url(home_url('/?nexage_gate_retry=1')) . '">' . esc_html($retry_label) . '</a></p></div></body></html>';
             exit;
         }
         $cookie = isset($_COOKIE['nexage_gate_access']) ? sanitize_text_field(wp_unslash($_COOKIE['nexage_gate_access'])) : '';

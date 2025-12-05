@@ -43,7 +43,7 @@
     var actions = document.createElement('div'); actions.className='nexage-gate-actions';
     if(cfg.method==='yesno'){
       var yes = document.createElement('button'); yes.className='nexage-gate-btn'; yes.textContent = text('yes_label')||'Yes';
-      var no = document.createElement('button'); no.className='nexage-gate-btn nexage-gate-secondary'; no.textContent = text('no_label')||'No';
+      var no = document.createElement('button'); no.className='nexage-gate-btn'; no.textContent = text('no_label')||'No';
       yes.addEventListener('click', function(){ approveFlow(); });
       no.addEventListener('click', function(){ denyFlow(); });
       actions.appendChild(yes); actions.appendChild(no);
@@ -67,7 +67,7 @@
       actions.appendChild(dateBox); actions.appendChild(confirm);
     }
     var rememberWrap = document.createElement('label'); rememberWrap.className='nexage-gate-remember';
-    var chk = document.createElement('input'); chk.type='checkbox'; chk.checked=true; chk.id='nexage-gate-remember';
+    var chk = document.createElement('input'); chk.type='checkbox'; chk.checked=false; chk.id='nexage-gate-remember';
     var span = document.createElement('span'); span.textContent = text('remember_label')||'Remember';
     rememberWrap.appendChild(chk); rememberWrap.appendChild(span);
     inner.appendChild(actions); if(cfg.cookieEnabled) inner.appendChild(rememberWrap);
@@ -77,7 +77,7 @@
     host.innerHTML=''; host.appendChild(overlay);
     requestAnimationFrame(function(){ overlay.classList.add('show'); panel.classList.add('show'); });
     function approveFlow(){
-      if(cfg.cookieEnabled){ var days = (document.getElementById('nexage-gate-remember')&&document.getElementById('nexage-gate-remember').checked)?cfg.cookieDays:0; setCookie('nexage_gate_access','approved',days); }
+      if(cfg.cookieEnabled){ var days = (document.getElementById('nexage-gate-remember')&&document.getElementById('nexage-gate-remember').checked)?cfg.cookieDays:(1/24); setCookie('nexage_gate_access','approved',days); }
       document.documentElement.classList.remove('nexage-gate-hidden');
       host.parentNode && host.parentNode.removeChild(host);
     }
