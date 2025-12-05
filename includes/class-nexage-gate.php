@@ -351,8 +351,11 @@ class Nexage_Gate {
         $blocked = get_query_var('nexage_gate_blocked');
         $retry = get_query_var('nexage_gate_retry');
         if ($retry) {
+            status_header(200);
+            nocache_headers();
             setcookie('nexage_gate_access', '', time() - 3600, '/');
-            wp_safe_redirect(home_url('/'));
+            $home = home_url('/');
+            echo '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Retry</title></head><body><script>document.cookie="nexage_gate_access=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";location.replace(' . json_encode($home) . ');</script></body></html>';
             exit;
         }
         if ($svg) {
